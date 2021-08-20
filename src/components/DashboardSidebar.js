@@ -54,12 +54,12 @@ const items = [
     title: 'Upgrade'
   },
   {
-    href: '/404',
+    href: '/',
     icon: AlertCircleIcon,
     title: 'Help'
   },
   {
-    href: '/login',
+    href: '/',
     icon: LogOutIcon,
     title: 'Log Out'
   }

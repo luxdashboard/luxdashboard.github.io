@@ -30,7 +30,7 @@ const TrafficByDevice = (props) => {
         hoverBorderColor: colors.common.white
       }
     ],
-    labels: ['Access', 'Littoral', 'Riparian']
+    labels: ['Riparian', 'Littoral', 'Usage']
   };
 
   const options = {
