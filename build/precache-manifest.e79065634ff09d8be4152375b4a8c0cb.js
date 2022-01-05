@@ -1,14 +1,14 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "991a5c40b820ab7f3d978808ea26629d",
+    "revision": "c27ab82a730d6f28a99c96f208b9903b",
     "url": "/demo/corona-react-free/template/demo_1/preview/index.html"
   },
   {
-    "revision": "560826743aecd10e0fca",
+    "revision": "23221a44f04e1a6048b1",
     "url": "/demo/corona-react-free/template/demo_1/preview/static/css/3.4aaf0001.chunk.css"
   },
   {
-    "revision": "8733eecce856ba7ed977",
+    "revision": "68b186c9881d3c3fcd7d",
     "url": "/demo/corona-react-free/template/demo_1/preview/static/css/main.e0874eb1.chunk.css"
   },
   {
@@ -48,8 +48,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/demo/corona-react-free/template/demo_1/preview/static/js/17.5e2bcc70.chunk.js"
   },
   {
-    "revision": "560826743aecd10e0fca",
-    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/3.17287583.chunk.js"
+    "revision": "23221a44f04e1a6048b1",
+    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/3.ba6e6db0.chunk.js"
   },
   {
     "revision": "e42c378ec6bf0d1f8f45",
@@ -60,8 +60,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/demo/corona-react-free/template/demo_1/preview/static/js/5.6938c565.chunk.js"
   },
   {
-    "revision": "710572be93f66014c69c",
-    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/6.815b4867.chunk.js"
+    "revision": "3515220a17b1abdab958",
+    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/6.1da8ad78.chunk.js"
   },
   {
     "revision": "e2826ee291689f04ac09",
@@ -76,12 +76,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/demo/corona-react-free/template/demo_1/preview/static/js/9.85244bbe.chunk.js"
   },
   {
-    "revision": "8733eecce856ba7ed977",
-    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/main.feb5374f.chunk.js"
+    "revision": "68b186c9881d3c3fcd7d",
+    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/main.3f26c6b2.chunk.js"
   },
   {
-    "revision": "883489faa526401e6ddd",
-    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/runtime~main.d839de80.js"
+    "revision": "bf88c9cd814c3415ef9e",
+    "url": "/demo/corona-react-free/template/demo_1/preview/static/js/runtime~main.62f055a3.js"
   },
   {
     "revision": "f54d958be5b48b4b2f5eebf1a677f6a7",
