@@ -68,7 +68,7 @@ class Sidebar extends Component {
                   <span className="count bg-success"></span>
                 </div>
                 <div className="profile-name">
-                  <h5 className="mb-0 font-weight-normal"><Trans>Henry Klein</Trans></h5>
+                  <h5 className="mb-0 font-weight-normal"><Trans>Bear Vasquez</Trans></h5>
                   <span><Trans>Gold Member</Trans></span>
                 </div>
               </div>
@@ -95,7 +95,7 @@ class Sidebar extends Component {
                       </div>
                     </div>
                     <div className="preview-item-content">
-                      <p className="preview-subject ellipsis mb-1 text-small"><Trans>Change Password</Trans></p>
+                      <p className="preview-subject ellipsis mb-1 text-small"><Trans>Disconnect Wallet</Trans></p>
                     </div>
                   </a>
                   <div className="dropdown-divider"></div>
@@ -122,6 +122,9 @@ class Sidebar extends Component {
               <span className="menu-title"><Trans>Dashboard</Trans></span>
             </Link>
           </li>
+
+          {/*
+
           <li className={ this.isPathActive('/basic-ui') ? 'nav-item menu-items active' : 'nav-item menu-items' }>
             <div className={ this.state.basicUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link' } onClick={ () => this.toggleMenuState('basicUiMenuOpen') } data-toggle="collapse">
               <span className="menu-icon">
@@ -221,9 +224,14 @@ class Sidebar extends Component {
               </div>
             </Collapse>
           </li>
+
+          */}
+
           <li className="nav-item nav-category">
             <span className="nav-link"><Trans>More</Trans></span>
           </li>
+
+{/*
           <li className={ this.isPathActive('/error-pages') ? 'nav-item menu-items active' : 'nav-item menu-items' }>
             <div className={ this.state.errorPagesMenuOpen ? 'nav-link menu-expanded' : 'nav-link' } onClick={ () => this.toggleMenuState('errorPagesMenuOpen') } data-toggle="collapse">
               <span className="menu-icon">
@@ -241,12 +249,14 @@ class Sidebar extends Component {
               </div>
             </Collapse>
           </li>
+*/}
+
           <li className="nav-item menu-items">
-            <a className="nav-link" href="http://bootstrapdash.com/demo/corona-react-free/documentation/documentation.html" rel="noopener noreferrer" target="_blank">
+            <a className="nav-link" href="http://www.atreideswater.com" rel="noopener noreferrer" target="_blank">
               <span className="menu-icon">
                 <i className="mdi mdi-file-document-box"></i>
               </span>
-              <span className="menu-title"><Trans>Documentation</Trans></span>
+              <span className="menu-title"><Trans>Website</Trans></span>
             </a>
           </li>
         </ul>

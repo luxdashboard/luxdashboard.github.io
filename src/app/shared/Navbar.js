@@ -1,16 +1,144 @@
 import React, { Component, useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import { parseEther, formatEther } from '@ethersproject/units';
+import { AUCTION_ABI, AUCTION_ADDRESS } from "../../config.js";
 import { Dropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { Trans } from 'react-i18next';
 import Modal from "react-bootstrap/Modal";
 import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
 
 function Navbar () {
 
+  async function initializeProvider() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    return new ethers.Contract(AUCTION_ADDRESS, AUCTION_ABI, signer);
+  }
+
+  const initialSourceData = Object.freeze({
+  source: ""
+});
+
+const initialLocData = Object.freeze({
+  loc: ""
+});
+
+const initialAmountData = Object.freeze({
+  amount: ""
+});
+
+const initialPriceData = Object.freeze({
+  price: ""
+});
+
+const initialLeaseLengthData = Object.freeze({
+  leaseLength: "0"
+});
+
   const [show, setShow] = useState(false);
+  const [leaseShow, setLeaseShow] = useState(false);
 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
+  const handleLeaseShow = () => setLeaseShow(true);
+  const [sourceData, updateSourceData] = useState(initialSourceData);
+  const [locData, updateLocData] = useState(initialLocData);
+  const [amountData, updateAmountData] = useState(initialAmountData);
+  const [priceData, updatePriceData] = useState(initialPriceData);
+  const [leaseOwn, setLeaseOwn] = useState(true);
+  const [leaseLData, updateLeaseLData] = useState(initialLeaseLengthData);
+
+  async function listAssetForSale() {
+   if (typeof window.ethereum !== 'undefined') {
+     const contract = await initializeProvider();
+     try {
+
+       var wSource = sourceData.source
+       var wLoc = locData.loc
+       var wAmount = parseInt(amountData.amount, 10)
+       var wPrice = parseInt(priceData.price, 10)
+       var wBool = leaseOwn
+       var wLength = parseInt(leaseLData.leaseLength, 10)
+
+
+       const makePurchase = await contract.addNewAsset(wSource, wLoc, wAmount, wPrice, wBool, wLength);
+
+       handleClose()
+
+     } catch (e) {
+       console.log('error listing asset: ', e);
+     }
+   }
+  }
+
+  const handleSourceChange = (e) => {
+      updateSourceData({
+        ...sourceData,
+
+        // Trimming any whitespace
+        [e.target.name]: e.target.value.trim()
+      });
+    };
+
+  const handleLocChange = (e) => {
+      updateLocData({
+        ...locData,
+
+        // Trimming any whitespace
+        [e.target.name]: e.target.value.trim()
+      });
+    };
+
+  const handleAmountChange = (e) => {
+      updateAmountData({
+        ...amountData,
+
+        // Trimming any whitespace
+        [e.target.name]: e.target.value.trim()
+      });
+    };
+
+  const handlePriceChange = (e) => {
+      updatePriceData({
+        ...priceData,
+
+        // Trimming any whitespace
+        [e.target.name]: e.target.value.trim()
+      });
+    };
+
+  const handleLeaseLengthChange = (e) => {
+      updateLeaseLData({
+        ...leaseLData,
+
+        // Trimming any whitespace
+        [e.target.name]: e.target.value.trim()
+      });
+    };
+
+
+  const handleLeaseChange = (e) => {
+
+    updateLeaseLData({
+      ...leaseLData,
+      leaseLength: "0"
+    });
+
+
+    if (leaseShow) {
+      setLeaseShow(false);
+      setLeaseOwn(true);
+    }
+
+    else{
+    setLeaseShow(true);
+    setLeaseOwn(false);
+    }
+  };
+
+
 
   function toggleOffcanvas() {
     document.querySelector('.sidebar-offcanvas').classList.toggle('active');
@@ -190,7 +318,7 @@ function Navbar () {
               <Dropdown.Toggle as="a" className="nav-link cursor-pointer no-caret">
                 <div className="navbar-profile">
                   <img className="img-xs rounded-circle" src={require('../../assets/images/faces/face15.jpg')} alt="profile" />
-                  <p className="mb-0 d-none d-sm-block navbar-profile-name"><Trans>Henry Klein</Trans></p>
+                  <p className="mb-0 d-none d-sm-block navbar-profile-name"><Trans>Bear Vasquez</Trans></p>
                   <i className="mdi mdi-menu-down d-none d-sm-block"></i>
                 </div>
               </Dropdown.Toggle>
@@ -232,13 +360,78 @@ function Navbar () {
         <Modal.Header closeButton>
           <Modal.Title>List New Asset</Modal.Title>
         </Modal.Header>
-        <Modal.Body>Asset Details</Modal.Body>
+        <Modal.Body>
+
+        Asset Details
+
+        <br />
+        <br />
+
+        <Form>
+        <Form.Group className="mb-3" controlId="formBasicEmail">
+          <Form.Label>Water Source</Form.Label>
+          <Form.Control type="text" name="source" placeholder="Waterway" onChange={handleSourceChange}/>
+          <Form.Text className="text-muted">
+            What is the water source?
+          </Form.Text>
+        </Form.Group>
+
+        <Form.Group className="mb-3" controlId="formBasicEmail">
+          <Form.Label>Location</Form.Label>
+          <Form.Control type="text" name="loc" placeholder="Water Location" onChange={handleLocChange}/>
+          <Form.Text className="text-muted">
+            Where is your water located?
+          </Form.Text>
+        </Form.Group>
+
+        <Form.Group className="mb-3" controlId="formBasicEmail">
+          <Form.Label>Amount (Acre/Ft)</Form.Label>
+          <Form.Control type="text" name="amount" placeholder="Amount" onChange={handleAmountChange}/>
+          <Form.Text className="text-muted">
+            How much water are you offering?
+          </Form.Text>
+        </Form.Group>
+
+        <Form.Group className="mb-3" controlId="formBasicEmail">
+          <Form.Label>Price ($USD)</Form.Label>
+          <Form.Control type="text" name="price" placeholder="Price ($USD)" onChange={handlePriceChange}/>
+          <Form.Text className="text-muted">
+            Please enter your price
+          </Form.Text>
+        </Form.Group>
+
+        <Form.Group className="mb-3" controlId="formBasicCheckbox" onChange={handleLeaseChange}>
+          <Form.Check
+            type="switch"
+            id="custom-switch"
+            label="This right is a lease"
+          />
+        </Form.Group>
+
+        {leaseShow ?
+        <Form.Group className="mb-3" controlId="formBasicLease">
+          <Form.Label>Lease Length)</Form.Label>
+          <Form.Control type="text" name="leaseLength" placeholder="Months" onChange={handleLeaseLengthChange}/>
+          <Form.Text className="text-muted">
+            Length of Lease in Months
+          </Form.Text>
+        </Form.Group>
+
+        : null}
+
+        <Form.Group className="mb-3" controlId="formBasicCheckbox">
+          <Form.Check type="checkbox" label="I understand that all listings are final" />
+        </Form.Group>
+        </Form>
+
+        </Modal.Body>
+
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleClose}>
-            Submit
+          <Button variant="primary" type="submit" onClick={() => {listAssetForSale()}}>
+            List Asset
           </Button>
         </Modal.Footer>
       </Modal>

@@ -1,7 +1,7 @@
 import React, { Component, useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { parseEther, formatEther } from '@ethersproject/units';
-import { Doughnut } from 'react-chartjs-2';
+import { Doughnut, Chart } from 'react-chartjs-2';
 import Slider from "react-slick";
 import { TodoListComponent } from '../apps/TodoList'
 import { VectorMap } from "react-jvectormap"
@@ -12,6 +12,7 @@ import Form from 'react-bootstrap/Form';
 
 
 function Dashboard () {
+
 
   const initialPriceData = Object.freeze({
   price: ""
@@ -26,6 +27,13 @@ function Dashboard () {
   const [beingBought, setBuying] = useState('');
   const [beingSold, setSelling] = useState('');
   const [priceData, updatePriceData] = useState(initialPriceData);
+  const [availAcre, setavailAcre] = useState('');
+  const [totalPurchases, setTotalPurchases] = useState('');
+  const [totalSales, setTotalSales] = useState('');
+  const [userHist, setUserHist] = useState('');
+  const [chartData, setChartData] = useState('');
+  const [checkTxnOne, setTxnOneBox] = useState(false);
+  const [checkTxnTwo, setTxnTwoBox] = useState(false);
 
   const mapData = {
     "BZ": 75.00,
@@ -66,13 +74,16 @@ function Dashboard () {
    async function initializeProvider() {
      const provider = new ethers.providers.Web3Provider(window.ethereum);
      const signer = provider.getSigner();
+
      return new ethers.Contract(AUCTION_ADDRESS, AUCTION_ABI, signer);
    }
+
 
   async function requestAccount() {
    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
    setAccount(accounts[0]);
    getBal(accounts[0])
+   getTxnHistory(accounts[0])
   }
 
   async function fetchHighestBid() {
@@ -89,6 +100,110 @@ function Dashboard () {
        console.log('error fetching highest bid: ', e);
      }
    }
+ }
+
+
+ async function grabAvailAcres() {
+  if (typeof window.ethereum !== 'undefined') {
+    const contract = await initializeProvider();
+
+    try {
+
+      const grabTotalAcre = await contract.totalAcres();
+      var newTotalAcres = parseInt(grabTotalAcre, 10)
+      setavailAcre(newTotalAcres)
+
+    } catch (e) {
+      console.log('error fetching acre/ft data: ', e);
+    }
+  }
+ }
+
+ async function grabTotalPurch() {
+  if (typeof window.ethereum !== 'undefined') {
+    const contract = await initializeProvider();
+
+    try {
+
+      const grabTotalPurch = await contract.getOwnerPurchases();
+      var newTotalPurch = parseInt(grabTotalPurch, 10)
+      setTotalPurchases(newTotalPurch)
+
+    } catch (e) {
+      console.log('error fetching purchase data: ', e);
+    }
+  }
+ }
+
+ async function grabTotalSale() {
+  if (typeof window.ethereum !== 'undefined') {
+    const contract = await initializeProvider();
+
+    try {
+
+      const grabTotalSale = await contract.getOwnerSale();
+      var newTotalSale = parseInt(grabTotalSale, 10)
+      setTotalSales(newTotalSale)
+
+    } catch (e) {
+      console.log('error fetching sale data: ', e);
+    }
+  }
+ }
+
+
+ async function getTxnHistory (addre) {
+   const provider = new ethers.providers.Web3Provider(window.ethereum);
+
+   const chainId = await provider.getNetwork()
+
+   console.log(chainId)
+
+   var chaiNetwork = chainId.name
+   var addr = addre
+
+   //chaiNetwork = 'ropsten'
+
+   if (chaiNetwork != 'unknown') {
+
+     let etherscanProvider = new ethers.providers.EtherscanProvider(chaiNetwork)
+
+     etherscanProvider.getHistory(addr).then((history) => {
+
+       var userTxnHistory = []
+
+      history.forEach((tx) => {
+
+        if ((parseInt(tx.value["_hex"]) != 0)) {
+
+          let currentTimestamp = tx.timestamp*1000
+          let date = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(currentTimestamp)
+
+          tx.timestamp = date
+
+          userTxnHistory.push(tx)
+        }
+
+      })
+
+      var totalTxnCount = userTxnHistory.length
+
+      if (userTxnHistory[totalTxnCount-2]) {
+        setTxnOneBox(true)
+      }
+
+      if (userTxnHistory[totalTxnCount-1]) {
+        setTxnTwoBox(true)
+      }
+
+      var userAbrTxnHistory = [userTxnHistory[totalTxnCount-2], userTxnHistory[totalTxnCount-1]]
+
+      setUserHist(userAbrTxnHistory)
+
+      console.log(userAbrTxnHistory)
+
+   });
+  }
  }
 
 
@@ -161,7 +276,7 @@ async function testFetch() {
         currentRightsForSale.push(oneRight)
       }
       else {
-        console.log("privately owned!")
+        console.log("not for sale!")
       }
     }
     setCurrentSale(currentRightsForSale);
@@ -176,24 +291,57 @@ async function fetchOwnedAssets() {
   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
   const curAccount = accounts[0]
   var myAllocation = 0;
+  var ownedAllocation = 0;
+  var leasedAllocation = 0;
+  var currentlySale = 0;
+
   try {
     var currentlyOwnedAssets = []
     for (var i = 0; i < assetCount; i++) {
       const oneRight = await contract.getOwnerAssets(i)
-      if ((oneRight.owner.toUpperCase() == curAccount.toUpperCase()) && (oneRight.active == true) && (oneRight.forSale == false)){
+      if ((oneRight.owner.toUpperCase() == curAccount.toUpperCase()) && (oneRight.active == true)){
         currentlyOwnedAssets.push(oneRight)
         myAllocation = myAllocation + parseInt(oneRight.amount, 10);
+
+        if (oneRight.forSale) {
+          currentlySale = currentlySale + parseInt(oneRight.amount, 10)
+        }
+
+        else if (oneRight.rightType) {
+          ownedAllocation = ownedAllocation + parseInt(oneRight.amount, 10)
+        }
+        else {
+          leasedAllocation = leasedAllocation + parseInt(oneRight.amount, 10)
+        }
       }
       else {
-        console.log("sold!")
+        console.log("right previously sold!")
       }
     }
+
+    var newChartData = [currentlySale, ownedAllocation, leasedAllocation]
+    setChartData(newChartData)
     setCurrentlyOwned(currentlyOwnedAssets);
     setTotalAllocation(myAllocation);
+
   } catch (e) {
     console.log('error fetching owned assets: ', e);
   }
 }
+
+
+
+var transactionHistoryData =  {
+  labels: ["For Sale", "Own", "Lease"],
+  legend: {display: true, position: "right"},
+  datasets: [{
+      data: chartData,
+      backgroundColor: [
+        "#111111","#00d25b","#ffab00"
+      ]
+    }
+  ]
+};
 
 
 
@@ -270,6 +418,7 @@ async function fetchOwnedAssets() {
    }
  }
 
+
  async function withdraw() {
    if (typeof window.ethereum !== 'undefined') {
      const contract = await initializeProvider();
@@ -286,14 +435,14 @@ async function fetchOwnedAssets() {
    }
  }
 
-  async function buyWaterRight(id, owner, waterSource, waterLocation, amount, price) {
+  async function buyWaterRight(id, owner, waterSource, waterLocation, amount, price, rightType, rightLength) {
   handleShow()
-  setBuying([id, owner, waterSource, waterLocation, amount, price])
+  setBuying([id, owner, waterSource, waterLocation, amount, price, rightType, rightLength])
   }
 
-  async function sellWaterRight(id, waterSource, waterLocation, amount) {
+  async function sellWaterRight(id, waterSource, waterLocation, amount, rightType, rightLength) {
   handleShowSell()
-  setSelling([id, waterSource, waterLocation, amount])
+  setSelling([id, waterSource, waterLocation, amount, rightType, rightLength])
   }
 
 
@@ -309,14 +458,15 @@ async function fetchOwnedAssets() {
 
   function renderMarketData() {
         return currentSale.map((eachSale, index) => {
-           const { id, owner, active, waterSource, waterLocation, amount, price } = eachSale //destructuring
+           const { id, owner, active, waterSource, waterLocation, amount, price, rightType, leaseLength } = eachSale //destructuring
 
            return (
              <tr>
                  <td key={id}>
+
                    <div className="preview-thumbnail">
-                     <div className="preview-icon bg-primary">
-                       <i className="mdi mdi-ethereum" onClick={() => {buyWaterRight(id, owner, waterSource, waterLocation, amount, price)}}></i>
+                     <div className="preview-icon bg-primary text-center">
+                       <i className="mdi mdi-ethereum buy-preview" style={{color:"white"}} onClick={() => {buyWaterRight(id, owner, waterSource, waterLocation, amount, price, rightType, leaseLength)}}></i>
                      </div>
                    </div>
                  </td>
@@ -338,19 +488,19 @@ async function fetchOwnedAssets() {
 
 function renderTableData() {
       return currentlyOwned.map((eachSale, index) => {
-         const { id, owner, active, waterSource, waterLocation, amount, price } = eachSale //destructuring
+         const { id, owner, active, waterSource, waterLocation, amount, price, forSale, rightType, leaseLength } = eachSale //destructuring
 
          return (
            <div className="preview-item border-bottom" key={id}>
              <div className="preview-thumbnail">
                <div className="preview-icon bg-primary">
-                 <i className="mdi mdi-ethereum" onClick={() => {sellWaterRight(id, waterSource, waterLocation, amount)}}></i>
+                 <i className="mdi mdi-ethereum" onClick={() => {sellWaterRight(id, waterSource, waterLocation, amount, rightType, leaseLength)}}></i>
                </div>
              </div>
              <div className="preview-item-content d-sm-flex flex-grow">
                <div className="flex-grow">
                  <h6 className="preview-subject">{waterSource} ({waterLocation})</h6>
-                 <p className="text-muted mb-0">{owner}</p>
+                 <p className="text-muted mb-0">{rightType ? "Owned" : ("Lease: " + leaseLength + " months remaining" )}</p>
                </div>
                <div className="mr-auto text-sm-right pt-2 pt-sm-0">
                  <p className="text-muted">Total: {amount.toString()} Acre/Ft</p>
@@ -362,16 +512,6 @@ function renderTableData() {
       })
    }
 
-  const transactionHistoryData =  {
-    labels: ["Paypal", "Stripe","Cash"],
-    datasets: [{
-        data: [55, 25, 20],
-        backgroundColor: [
-          "#111111","#00d25b","#ffab00"
-        ]
-      }
-    ]
-  };
 
   const transactionHistoryOptions = {
     responsive: true,
@@ -384,7 +524,9 @@ function renderTableData() {
       }
     },
     legend: {
-      display: false
+      display: true,
+      padding: 45,
+      position: "bottom"
     },
     tooltips: {
       enabled: true
@@ -402,6 +544,9 @@ function renderTableData() {
    requestAccount();
    testFetch();
    fetchOwnedAssets();
+   grabAvailAcres()
+   grabTotalPurch()
+   grabTotalSale()
  }, []);
 
  useEffect(() => {
@@ -412,7 +557,7 @@ function renderTableData() {
 
     return (
       <div>
-        <div className="row">
+        {/*<div className="row">
           <div className="col-12 grid-margin stretch-card">
             <div className="card corona-gradient-card">
               <div className="card-body py-0 px-0 px-sm-3">
@@ -431,7 +576,7 @@ function renderTableData() {
               </div>
             </div>
           </div>
-        </div>
+        </div>*/}
         <div className="row">
           <div className="col-xl-3 col-sm-6 grid-margin stretch-card">
             <div className="card">
@@ -479,7 +624,7 @@ function renderTableData() {
                 <div className="row">
                   <div className="col-9">
                     <div className="d-flex align-items-center align-self-start">
-                      <h3 className="mb-0">14</h3>
+                      <h3 className="mb-0">{totalAllocation}</h3>
                       <p className="text-danger ml-2 mb-0 font-weight-medium">Acre/Ft</p>
                     </div>
                   </div>
@@ -489,7 +634,7 @@ function renderTableData() {
                     </div>
                   </div>
                 </div>
-                <h6 className="text-muted font-weight-normal">Total Supply</h6>
+                <h6 className="text-muted font-weight-normal">Remaining</h6>
               </div>
             </div>
           </div>
@@ -499,7 +644,7 @@ function renderTableData() {
                 <div className="row">
                   <div className="col-9">
                     <div className="d-flex align-items-center align-self-start">
-                      <h3 className="mb-0">0</h3>
+                      <h3 className="mb-0">{availAcre}</h3>
                       <p className="text-success ml-2 mb-0 font-weight-medium">Acre/Ft</p>
                     </div>
                   </div>
@@ -509,67 +654,91 @@ function renderTableData() {
                     </div>
                   </div>
                 </div>
-                <h6 className="text-muted font-weight-normal">Avg. Use</h6>
+                <h6 className="text-muted font-weight-normal">Market Supply</h6>
               </div>
             </div>
           </div>
         </div>
+
+
         <div className="row">
-          <div className="col-md-4 grid-margin stretch-card">
+          {/*<div className="col-md-4 grid-margin stretch-card">
             <div className="card">
               <div className="card-body">
-                <h4 className="card-title">Yearly Allocation</h4>
-                <div className="aligner-wrapper">
-                  <Doughnut data={transactionHistoryData} options={transactionHistoryOptions} />
-                  <div className="absolute center-content">
-                    <h5 className="font-weight-normal text-whiite text-center mb-2 text-white">1200</h5>
-                    <p className="text-small text-muted text-center mb-0">Total</p>
-                  </div>
-                </div>
+                <h4 className="card-title">Recent Activity</h4>
+                {checkTxnOne ?
                 <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
                   <div className="text-md-center text-xl-left">
-                    <h6 className="mb-1">Transfer to 0x5fa7a5c</h6>
-                    <p className="text-muted mb-0">07 Jan 2019, 09:12AM</p>
+                    <h6 className="mb-1">Transfer to {userHist[1] ? userHist[1].to.toString().substring(0, 5) + "..." : null}</h6>
+                    <p className="text-muted mb-0">{userHist[1] ? userHist[1].timestamp : "NULL"}</p>
                   </div>
                   <div className="align-self-center flex-grow text-right text-md-center text-xl-right py-md-2 py-xl-0">
-                    <h6 className="font-weight-bold mb-0">$236</h6>
+                    <h6 className="font-weight-bold mb-0">{userHist[1] ? ethers.utils.formatEther((parseInt(userHist[1].value["_hex"]*10000000000))) : "NULL"}</h6>
                   </div>
                 </div>
+                : null }
+
+                {checkTxnTwo ?
                 <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
                   <div className="text-md-center text-xl-left">
-                    <h6 className="mb-1">Tranfer to 0xb1765ee</h6>
-                    <p className="text-muted mb-0">07 Jan 2019, 09:12AM</p>
+                    <h6 className="mb-1">Tranfer to {userHist[0] ? userHist[0].to.toString().substring(0, 5) + "..." : "NULL"}</h6>
+                    <p className="text-muted mb-0">{userHist[0] ? userHist[0].timestamp : "NULL"}</p>
                   </div>
                   <div className="align-self-center flex-grow text-right text-md-center text-xl-right py-md-2 py-xl-0">
-                    <h6 className="font-weight-bold mb-0">$593</h6>
+                    <h6 className="font-weight-bold mb-0">{userHist[0] ? ethers.utils.formatEther(parseInt(userHist[0].value["_hex"]*10000000000)) : "NULL"}</h6>
                   </div>
                 </div>
+                :
+                <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
+                  <div className="text-md-center text-xl-left">
+                    <h6 className="mb-1">No Recent Transactions!</h6>
+                  </div>
+                </div>
+              }
               </div>
             </div>
           </div>
-          <div className="col-md-8 grid-margin stretch-card">
+          */}
+
+
+
+          <div className="col-md-12 grid-margin stretch-card">
             <div className="card">
               <div className="card-body">
-                <div className="d-flex flex-row justify-content-between">
-                  <h4 className="card-title mb-1">My Current Rights</h4>
-                  <p className="text-muted mb-1">Data</p>
-                </div>
+
+              <h4 className="card-title">My Water Rights</h4>
                 <div className="row">
-                  <div className="col-12">
-                    <div className="preview-list">
+                  <div className="col-6">
+                    <div className="aligner-wrapper">
+                      <Doughnut data={transactionHistoryData} options={transactionHistoryOptions} />
+                      <div className="absolute center-content">
+                        <h5 className="font-weight-normal text-whiite text-center mb-2 text-white">{totalAllocation} Acre/Ft</h5>
+                        <p className="text-small text-muted text-center mb-0">Current Rights</p>
+                      </div>
+                    </div>
+                  </div>
 
-                      {renderTableData()}
+                  <div className="col-6 align-items-center">
+                    <div className="row">
+                      <div className="col-12">
+                        <div className="preview-list">
 
+                          {renderTableData()}
+
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
+
         <div className="row">
           <div className="col-sm-4 grid-margin">
-            <div className="card">
+            <div className="card h-100">
               <div className="card-body">
                 <h5>Assets</h5>
                 <div className="row">
@@ -578,50 +747,99 @@ function renderTableData() {
                       <h2 className="mb-0">{balance}</h2>
                       <p className="text-success ml-2 mb-0 font-weight-medium">ETH</p>
                     </div>
-                    <h6 className="text-muted font-weight-normal">{balance*.66} available to trade</h6>
+                    <h6 className="text-muted font-weight-normal">{(balance*.66).toFixed(6)} available to trade</h6>
                   </div>
                   <div className="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
                     <i className="icon-lg mdi mdi-codepen text-primary ml-auto"></i>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-sm-4 grid-margin">
-            <div className="card">
-              <div className="card-body">
-                <h5>Sales</h5>
+
                 <div className="row">
                   <div className="col-8 col-sm-12 col-xl-8 my-auto">
                     <div className="d-flex d-sm-block d-md-flex align-items-center">
-                      <h2 className="mb-0">$45850</h2>
-                      <p className="text-success ml-2 mb-0 font-weight-medium">+8.3%</p>
+                      <h2 className="mb-0">${(balance * 3162).toFixed(2)}</h2>
+                      <p className="text-success ml-2 mb-0 font-weight-medium">USD</p>
                     </div>
-                    <h6 className="text-muted font-weight-normal"> 9.61% Since last month</h6>
+                    <h6 className="text-muted font-weight-normal">${(balance*.66 * 3162).toFixed(2)} available to trade</h6>
                   </div>
                   <div className="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
-                    <i className="icon-lg mdi mdi-wallet-travel text-danger ml-auto"></i>
+                    <i className="icon-lg mdi mdi-currency-usd text-primary ml-auto"></i>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
           <div className="col-sm-4 grid-margin">
-            <div className="card">
+            <div className="card h-100">
               <div className="card-body">
-                <h5>Purchase</h5>
+                <h4 className="card-title">Recent Activity</h4>
+                {checkTxnOne ?
+                <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
+                  <div className="text-md-center text-xl-left">
+                    <h6 className="mb-1">Transfer to {userHist[1] ? userHist[1].to.toString().substring(0, 5) + "..." : null}</h6>
+                    <p className="text-muted mb-0">{userHist[1] ? userHist[1].timestamp : "NULL"}</p>
+                  </div>
+                  <div className="align-self-center flex-grow text-right text-md-center text-xl-right py-md-2 py-xl-0">
+                    <h6 className="font-weight-bold mb-0">{userHist[1] ? ethers.utils.formatEther((parseInt(userHist[1].value["_hex"]))) : "NULL"}</h6>
+                  </div>
+                </div>
+                : null }
+
+                {checkTxnTwo ?
+                <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
+                  <div className="text-md-center text-xl-left">
+                    <h6 className="mb-1">Tranfer to {userHist[0] ? userHist[0].to.toString().substring(0, 5) + "..." : "NULL"}</h6>
+                    <p className="text-muted mb-0">{userHist[0] ? userHist[0].timestamp : "NULL"}</p>
+                  </div>
+                  <div className="align-self-center flex-grow text-right text-md-center text-xl-right py-md-2 py-xl-0">
+                    <h6 className="font-weight-bold mb-0">{userHist[0] ? ethers.utils.formatEther(parseInt(userHist[0].value["_hex"])) : "NULL"}</h6>
+                  </div>
+                </div>
+                :
+                <div className="bg-gray-dark d-flex d-md-block d-xl-flex flex-row py-3 px-4 px-md-3 px-xl-4 rounded mt-3">
+                  <div className="text-md-center text-xl-left">
+                    <h6 className="mb-1">No Recent Transactions!</h6>
+                  </div>
+                </div>
+              }
+              </div>
+            </div>
+          </div>
+          <div className="col-sm-4 grid-margin">
+            <div className="card h-100">
+              <div className="card-body">
+                <h5>Purchases</h5>
                 <div className="row">
                   <div className="col-8 col-sm-12 col-xl-8 my-auto">
                     <div className="d-flex d-sm-block d-md-flex align-items-center">
-                      <h2 className="mb-0">$2039</h2>
+                      <h2 className="mb-0">${totalPurchases}</h2>
                       <p className="text-danger ml-2 mb-0 font-weight-medium">-2.1% </p>
                     </div>
                     <h6 className="text-muted font-weight-normal">2.27% Since last month</h6>
                   </div>
                   <div className="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
-                    <i className="icon-lg mdi mdi-monitor text-success ml-auto"></i>
+                    <i className="icon-lg mdi mdi-chart-line text-success ml-auto"></i>
                   </div>
                 </div>
+                <br />
+                <br />
+
+                <h5>Sales</h5>
+                <div className="row">
+                  <div className="col-8 col-sm-12 col-xl-8 my-auto">
+                    <div className="d-flex d-sm-block d-md-flex align-items-center">
+                      <h2 className="mb-0">${totalSales}</h2>
+                      <p className="text-danger ml-2 mb-0 font-weight-medium">-3.9% </p>
+                    </div>
+                    <h6 className="text-muted font-weight-normal">1.02% Since last month</h6>
+                  </div>
+                  <div className="col-4 col-sm-12 col-xl-4 text-center text-xl-right">
+                    <i className="icon-lg mdi mdi-chart-bar text-success ml-auto"></i>
+                  </div>
+                </div>
+
+
               </div>
             </div>
           </div>
@@ -657,6 +875,8 @@ function renderTableData() {
             </div>
           </div>
         </div>
+
+        {/*
         <div className="row">
           <div className="col-md-6 col-xl-4 grid-margin stretch-card">
             <div className="card">
@@ -864,6 +1084,9 @@ function renderTableData() {
             </div>
           </div>
         </div>
+        */}
+
+
         <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>Purchase Water Right</Modal.Title>
@@ -871,11 +1094,14 @@ function renderTableData() {
         <Modal.Body>
           <h3>Asset Details</h3>
           <p> You are purchasing the following right: </p>
+          <p> Price: ${beingBought ? beingBought[5].toString() : ""}</p>
           <p> ID: {beingBought ? beingBought[0].toString() : ""}</p>
           <p> Owner: {beingBought ? beingBought[1].toString() : ""}</p>
           <p> Source: {beingBought ? beingBought[2].toString() : ""}</p>
           <p> Location: {beingBought ? beingBought[3].toString() : ""}</p>
-          <p> Amount: {beingBought ? beingBought[4].toString() : ""}</p>
+          <p> Amount (Acre/Ft): {beingBought ? beingBought[4].toString() : ""}</p>
+          <p> Type: {beingBought[6] ? "Purchase" : "Lease"}</p>
+          {beingBought[6] ? null : <p> Length: {beingBought[7] ? parseInt(beingBought[7]["_hex"]) : null} months</p>}
           <Form>
           <Form.Group className="mb-3" controlId="formBasicCheckbox">
             <Form.Check type="checkbox" label="I understand that all sales are final" />
@@ -902,7 +1128,9 @@ function renderTableData() {
         <p> ID: {beingSold ? beingSold[0].toString() : ""}</p>
         <p> Source: {beingSold ? beingSold[1].toString() : ""}</p>
         <p> Location: {beingSold ? beingSold[2].toString() : ""}</p>
-        <p> Amount: {beingSold ? beingSold[3].toString() : ""}</p>
+        <p> Amount (Acre/Ft): {beingSold ? beingSold[3].toString() : ""}</p>
+        <p> Type: {beingSold[4] ? "Purchase" : "Lease"}</p>
+        {beingSold[4] ? null : <p> Length: {beingSold[5] ? parseInt(beingSold[5]["_hex"]) : null} months</p>}
         <Form>
         <Form.Group className="mb-3" controlId="formBasicEmail">
           <Form.Label>Price (in $USD)</Form.Label>
